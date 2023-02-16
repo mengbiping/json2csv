@@ -42,16 +42,28 @@ func NewCSVWriter(w io.Writer) *CSVWriter {
 	}
 }
 
-// WriteCSV writes CSV data.
-func (w *CSVWriter) WriteCSV(results []KeyValue) error {
-	if w.Transpose {
-		return w.writeTransposedCSV(results)
+func (w *CSVWriter) WriteCsvHeader(csvHeader CSVHeader) error {
+	result := KeyValue{}
+	for h := range csvHeader {
+		result[h] = ""
 	}
-	return w.writeCSV(results)
+	err := w.WriteCSV([]KeyValue{result}, true, false)
+	if err != nil {
+		return err
+	}
+	return nil
 }
 
 // WriteCSV writes CSV data.
-func (w *CSVWriter) writeCSV(results []KeyValue) error {
+func (w *CSVWriter) WriteCSV(results []KeyValue, writeHeader bool, writeRecord bool) error {
+	if w.Transpose {
+		return w.writeTransposedCSV(results)
+	}
+	return w.writeCSV(results, writeHeader, writeRecord)
+}
+
+// WriteCSV writes CSV data.
+func (w *CSVWriter) writeCSV(results []KeyValue, writeHeader bool, writeRecord bool) error {
 	pts, err := allPointers(results)
 	if err != nil {
 		return err
@@ -60,14 +72,18 @@ func (w *CSVWriter) writeCSV(results []KeyValue) error {
 	keys := pts.Strings()
 	header := w.getHeader(pts)
 
-	if err := w.Write(header); err != nil {
-		return err
+	if writeHeader {
+		if err := w.Write(header); err != nil {
+			return err
+		}
 	}
 
-	for _, result := range results {
-		record := toRecord(result, keys)
-		if err := w.Write(record); err != nil {
-			return err
+	if writeRecord {
+		for _, result := range results {
+			record := toRecord(result, keys)
+			if err := w.Write(record); err != nil {
+				return err
+			}
 		}
 	}
 

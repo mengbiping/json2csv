@@ -118,7 +118,7 @@ func mainAction(c *cli.Context) {
 		}
 	}
 
-	results, err := json2csv.JSON2CSV(data)
+	results, err := json2csv.JSON2CSV(data, json2csv.CSVHeader{})
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -159,7 +159,7 @@ func printCSV(w io.Writer, results []json2csv.KeyValue, headerStyle json2csv.Key
 	csv := json2csv.NewCSVWriter(w)
 	csv.HeaderStyle = headerStyle
 	csv.Transpose = transpose
-	if err := csv.WriteCSV(results); err != nil {
+	if err := csv.WriteCSV(results, true, true); err != nil {
 		return err
 	}
 	return nil

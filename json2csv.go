@@ -3,11 +3,16 @@ package json2csv
 
 import (
 	"errors"
+	"io"
 	"reflect"
 )
 
+type JSONStreamReader interface{}
+
+type CSVHeader map[string]interface{}
+
 // JSON2CSV converts JSON to CSV.
-func JSON2CSV(data interface{}) ([]KeyValue, error) {
+func JSON2CSV(data interface{}, csvHeader CSVHeader) ([]KeyValue, error) {
 	results := []KeyValue{}
 	v := valueOf(data)
 	switch v.Kind() {
@@ -18,6 +23,9 @@ func JSON2CSV(data interface{}) ([]KeyValue, error) {
 				return nil, err
 			}
 			results = append(results, result)
+			for s := range result {
+				csvHeader[s] = ""
+			}
 		}
 	case reflect.Slice:
 		if isObjectArray(v) {
@@ -27,6 +35,9 @@ func JSON2CSV(data interface{}) ([]KeyValue, error) {
 					return nil, err
 				}
 				results = append(results, result)
+				for s := range result {
+					csvHeader[s] = ""
+				}
 			}
 		} else if v.Len() > 0 {
 			result, err := flatten(v)
@@ -35,6 +46,9 @@ func JSON2CSV(data interface{}) ([]KeyValue, error) {
 			}
 			if result != nil {
 				results = append(results, result)
+				for s := range result {
+					csvHeader[s] = ""
+				}
 			}
 		}
 	default:
@@ -42,6 +56,25 @@ func JSON2CSV(data interface{}) ([]KeyValue, error) {
 	}
 
 	return results, nil
+}
+
+func JSON2CSVOnline(jsonStreamReader JSONStreamReader, csvHeader CSVHeader, output io.Writer) error {
+	results, err := JSON2CSV(jsonStreamReader, CSVHeader{})
+	if err != nil {
+		return err
+	}
+	for _, res := range results {
+		for h := range csvHeader {
+			if _, exist := res[h]; !exist {
+				res[h] = ""
+			}
+		}
+	}
+	csv := NewCSVWriter(output)
+	if err := csv.WriteCSV(results, false, true); err != nil {
+		return err
+	}
+	return nil
 }
 
 func isObjectArray(obj interface{}) bool {
