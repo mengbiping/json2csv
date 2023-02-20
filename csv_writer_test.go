@@ -23,7 +23,7 @@ func TestKeyWithTrailingSpace(t *testing.T) {
 		},
 	}
 
-	csvContent, err := json2csv.JSON2CSV(responses, json2csv.CSVHeader{}) // csvContent seems to be complete!
+	csvContent, err := json2csv.JSON2CSV(responses, nil) // csvContent seems to be complete!
 	if err != nil {
 		t.Fatal(err)
 	}
