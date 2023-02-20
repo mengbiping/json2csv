@@ -42,28 +42,67 @@ func NewCSVWriter(w io.Writer) *CSVWriter {
 	}
 }
 
-func (w *CSVWriter) WriteCsvHeader(csvHeader CSVHeader) error {
+// WriterHeader only writes header.
+func (w *CSVWriter) WriterHeader(csvHeader CSVHeader) error {
 	result := KeyValue{}
 	for h := range csvHeader {
 		result[h] = ""
 	}
-	err := w.WriteCSV([]KeyValue{result}, true, false)
+	results := []KeyValue{result}
+	pts, err := allPointers(results)
 	if err != nil {
+		return err
+	}
+	sort.Sort(pts)
+	header := w.getHeader(pts)
+
+	if err := w.Write(header); err != nil {
+		return err
+	}
+	w.Flush()
+	if err := w.Error(); err != nil {
+		return err
+	}
+	return nil
+}
+
+// WriteCSVByHeader writes CSV data by header.
+func (w *CSVWriter) WriteCSVByHeader(results []KeyValue, csvHeader CSVHeader) error {
+	pts, err := allPointers(results)
+	if err != nil {
+		return err
+	}
+	sort.Sort(pts)
+	keys := pts.Strings()
+
+	for _, result := range results {
+		for h := range csvHeader {
+			if _, exist := result[h]; !exist {
+				result[h] = ""
+			}
+		}
+		record := toRecord(result, keys)
+		if err := w.Write(record); err != nil {
+			return err
+		}
+	}
+	w.Flush()
+	if err := w.Error(); err != nil {
 		return err
 	}
 	return nil
 }
 
 // WriteCSV writes CSV data.
-func (w *CSVWriter) WriteCSV(results []KeyValue, writeHeader bool, writeRecord bool) error {
+func (w *CSVWriter) WriteCSV(results []KeyValue) error {
 	if w.Transpose {
 		return w.writeTransposedCSV(results)
 	}
-	return w.writeCSV(results, writeHeader, writeRecord)
+	return w.writeCSV(results)
 }
 
 // WriteCSV writes CSV data.
-func (w *CSVWriter) writeCSV(results []KeyValue, writeHeader bool, writeRecord bool) error {
+func (w *CSVWriter) writeCSV(results []KeyValue) error {
 	pts, err := allPointers(results)
 	if err != nil {
 		return err
@@ -72,18 +111,14 @@ func (w *CSVWriter) writeCSV(results []KeyValue, writeHeader bool, writeRecord b
 	keys := pts.Strings()
 	header := w.getHeader(pts)
 
-	if writeHeader {
-		if err := w.Write(header); err != nil {
-			return err
-		}
+	if err := w.Write(header); err != nil {
+		return err
 	}
 
-	if writeRecord {
-		for _, result := range results {
-			record := toRecord(result, keys)
-			if err := w.Write(record); err != nil {
-				return err
-			}
+	for _, result := range results {
+		record := toRecord(result, keys)
+		if err := w.Write(record); err != nil {
+			return err
 		}
 	}
 

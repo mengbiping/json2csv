@@ -27,7 +27,7 @@ func TestKeyWithTrailingSpace(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	wr.WriteCSV(csvContent, true, true)
+	wr.WriteCSV(csvContent)
 	wr.Flush()
 
 	got := b.String()

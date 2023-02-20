@@ -7,11 +7,15 @@ import (
 	"reflect"
 )
 
-type JSONStreamReader interface{}
+type JSONStreamReader interface {
+	Read() map[string]interface{}
+	HasNext() bool
+}
 
 type CSVHeader map[string]interface{}
 
 // JSON2CSV converts JSON to CSV.
+// Update CSVHeader according to the data provided if csvHeader is not nil
 func JSON2CSV(data interface{}, csvHeader CSVHeader) ([]KeyValue, error) {
 	results := []KeyValue{}
 	v := valueOf(data)
@@ -23,8 +27,10 @@ func JSON2CSV(data interface{}, csvHeader CSVHeader) ([]KeyValue, error) {
 				return nil, err
 			}
 			results = append(results, result)
-			for s := range result {
-				csvHeader[s] = ""
+			if csvHeader != nil {
+				for s := range result {
+					csvHeader[s] = ""
+				}
 			}
 		}
 	case reflect.Slice:
@@ -35,8 +41,10 @@ func JSON2CSV(data interface{}, csvHeader CSVHeader) ([]KeyValue, error) {
 					return nil, err
 				}
 				results = append(results, result)
-				for s := range result {
-					csvHeader[s] = ""
+				if csvHeader != nil {
+					for s := range result {
+						csvHeader[s] = ""
+					}
 				}
 			}
 		} else if v.Len() > 0 {
@@ -46,8 +54,10 @@ func JSON2CSV(data interface{}, csvHeader CSVHeader) ([]KeyValue, error) {
 			}
 			if result != nil {
 				results = append(results, result)
-				for s := range result {
-					csvHeader[s] = ""
+				if csvHeader != nil {
+					for s := range result {
+						csvHeader[s] = ""
+					}
 				}
 			}
 		}
@@ -58,21 +68,35 @@ func JSON2CSV(data interface{}, csvHeader CSVHeader) ([]KeyValue, error) {
 	return results, nil
 }
 
-func JSON2CSVOnline(jsonStreamReader JSONStreamReader, csvHeader CSVHeader, output io.Writer) error {
-	results, err := JSON2CSV(jsonStreamReader, CSVHeader{})
+func JSON2CSVHeader(reader JSONStreamReader) (CSVHeader, error) {
+	header := CSVHeader{}
+	for reader.HasNext() {
+		_, err := JSON2CSV(reader.Read(), header)
+		if err != nil {
+			return header, nil
+		}
+	}
+	return header, nil
+}
+
+func JSON2CSVOnline(reader JSONStreamReader, csvHeader CSVHeader, output io.Writer) error {
+	writer := NewCSVWriter(output)
+	err := writer.WriterHeader(csvHeader)
 	if err != nil {
 		return err
 	}
-	for _, res := range results {
-		for h := range csvHeader {
-			if _, exist := res[h]; !exist {
-				res[h] = ""
-			}
+	for reader.HasNext() {
+		csvRow, err := JSON2CSV(reader.Read(), nil)
+		if err != nil {
+			return err
 		}
-	}
-	csv := NewCSVWriter(output)
-	if err := csv.WriteCSV(results, false, true); err != nil {
-		return err
+		err = writer.WriteCSVByHeader(
+			csvRow,
+			csvHeader,
+		)
+		if err != nil {
+			return err
+		}
 	}
 	return nil
 }

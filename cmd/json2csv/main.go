@@ -159,7 +159,7 @@ func printCSV(w io.Writer, results []json2csv.KeyValue, headerStyle json2csv.Key
 	csv := json2csv.NewCSVWriter(w)
 	csv.HeaderStyle = headerStyle
 	csv.Transpose = transpose
-	if err := csv.WriteCSV(results, true, true); err != nil {
+	if err := csv.WriteCSV(results); err != nil {
 		return err
 	}
 	return nil

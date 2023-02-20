@@ -1,8 +1,10 @@
 package json2csv
 
 import (
+	"archive/zip"
 	"bytes"
 	"encoding/json"
+	"io"
 	"os"
 	"reflect"
 	"testing"
@@ -137,36 +139,48 @@ func TestJSON2CSV(t *testing.T) {
 	}
 }
 
+func NewJSONStreamZipReader(zipFileName string) JSONStreamReader {
+	zipReader, _ := zip.OpenReader(zipFileName)
+	return &JSONStreamZipReader{data: zipReader.File}
+}
+
+type JSONStreamZipReader struct {
+	data  []*zip.File
+	index int
+}
+
+func (jz *JSONStreamZipReader) HasNext() bool {
+	return jz.index < len(jz.data)
+}
+
+func (jz *JSONStreamZipReader) Read() map[string]interface{} {
+	child := jz.data[jz.index]
+	jz.index++
+	res := make(map[string]interface{})
+	cfd, _ := child.Open()
+	content, _ := io.ReadAll(cfd)
+	_ = json.Unmarshal(content, &res)
+	_ = cfd.Close()
+	return res
+}
+
 func TestJSON2CSVOnline(t *testing.T) {
-	lenTestcases := len(testJSON2CSVCases) - 3
-	jsonStreamZipReader := make([]interface{}, lenTestcases)
-	for caseIndex, testCase := range testJSON2CSVCases[0:lenTestcases] {
-		obj, err := json2obj(testCase.json)
-		if err != nil {
-			t.Fatal(err)
-		}
-		jsonStreamZipReader[caseIndex] = obj
-	}
 	// extract csvHeader
-	csvHeader := CSVHeader{}
-	for index, jsonStreamReader := range jsonStreamZipReader {
-		_, err := JSON2CSV(jsonStreamReader, csvHeader)
-		if err != nil {
-			t.Errorf("%d: Expected %v", index, err)
-		}
+	reader := NewJSONStreamZipReader("test.zip")
+	csvHeader, err := JSON2CSVHeader(reader)
+	if err != nil {
+		t.Errorf("Exception: %v", err)
+		return
 	}
+
+	// extract row
 	output, err := os.Create("testFile.csv")
 	if err != nil {
 		t.Errorf("Exception: %v", err)
 	}
-	csv := NewCSVWriter(output)
-	if err := csv.WriteCsvHeader(csvHeader); err != nil {
-		t.Errorf("Exception: %v", err)
-	}
-	for index, jsonStreamReader := range jsonStreamZipReader {
-		err := JSON2CSVOnline(jsonStreamReader, csvHeader, output)
-		if err != nil {
-			t.Errorf("Index: %d, JsonStream: %v, Except: %v", index, jsonStreamReader, err)
-		}
+	reader = NewJSONStreamZipReader("test.zip")
+	err = JSON2CSVOnline(reader, csvHeader, output)
+	if err != nil {
+		t.Errorf("ExceptionL %v", err)
 	}
 }
