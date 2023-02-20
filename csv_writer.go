@@ -66,9 +66,15 @@ func (w *CSVWriter) WriterHeader(csvHeader CSVHeader) error {
 	return nil
 }
 
-// WriteCSVByHeader writes CSV data by header.
+// WriteCSVByHeader writes CSV rows according the given header.
+// For header columns of csvHeader that are missing in results, output an empty value.
+// Fields of results that are absent in csvHeader are ignored.
 func (w *CSVWriter) WriteCSVByHeader(results []KeyValue, csvHeader CSVHeader) error {
-	pts, err := allPointers(results)
+	result := KeyValue{}
+	for h := range csvHeader {
+		result[h] = ""
+	}
+	pts, err := allPointers([]KeyValue{result})
 	if err != nil {
 		return err
 	}
