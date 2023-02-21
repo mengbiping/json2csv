@@ -6,8 +6,7 @@ import (
 	"io"
 )
 
-func NewJSONStreamZipReader(zipFileName string) JSONStreamReader {
-	zipReader, _ := zip.OpenReader(zipFileName)
+func NewJSONStreamZipReader(zipReader *zip.Reader) JSONStreamReader {
 	return &JSONStreamZipReader{data: zipReader.File}
 }
 

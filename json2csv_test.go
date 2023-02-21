@@ -1,6 +1,7 @@
 package json2csv
 
 import (
+	"archive/zip"
 	"bytes"
 	"encoding/json"
 	"os"
@@ -138,9 +139,9 @@ func TestJSON2CSV(t *testing.T) {
 }
 
 func TestJSON2CSVOnline(t *testing.T) {
-	zipFileName := "test.zip"
 	// extract csvHeader
-	reader := NewJSONStreamZipReader(zipFileName)
+	zipReader, err := zip.OpenReader("test.zip")
+	reader := NewJSONStreamZipReader(&zipReader.Reader)
 	csvHeader, err := JSON2CSVHeader(reader)
 	if err != nil {
 		t.Errorf("Exception: %v", err)
@@ -152,8 +153,12 @@ func TestJSON2CSVOnline(t *testing.T) {
 	if err != nil {
 		t.Errorf("Exception: %v", err)
 	}
-	reader = NewJSONStreamZipReader(zipFileName)
+	reader = NewJSONStreamZipReader(&zipReader.Reader)
 	err = JSON2CSVOnline(reader, csvHeader, output)
+	if err != nil {
+		t.Errorf("ExceptionL %v", err)
+	}
+	err = zipReader.Close()
 	if err != nil {
 		t.Errorf("ExceptionL %v", err)
 	}
