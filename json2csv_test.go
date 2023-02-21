@@ -3,6 +3,7 @@ package json2csv
 import (
 	"bytes"
 	"encoding/json"
+	"os"
 	"reflect"
 	"testing"
 )
@@ -118,13 +119,14 @@ var testJSON2CSVCases = []struct {
 }
 
 func TestJSON2CSV(t *testing.T) {
+	csvHeader := CSVHeader{}
+	var actual []KeyValue
 	for caseIndex, testCase := range testJSON2CSVCases {
 		obj, err := json2obj(testCase.json)
 		if err != nil {
 			t.Fatal(err)
 		}
-
-		actual, err := JSON2CSV(obj)
+		actual, err = JSON2CSV(obj, csvHeader)
 		if err != nil {
 			if err.Error() != testCase.err {
 				t.Errorf("%d: Expected %v, but %v", caseIndex, testCase.err, err)
@@ -132,5 +134,27 @@ func TestJSON2CSV(t *testing.T) {
 		} else if !reflect.DeepEqual(testCase.expected, actual) {
 			t.Errorf("%d: Expected %#v, but %#v", caseIndex, testCase.expected, actual)
 		}
+	}
+}
+
+func TestJSON2CSVOnline(t *testing.T) {
+	zipFileName := "test.zip"
+	// extract csvHeader
+	reader := NewJSONStreamZipReader(zipFileName)
+	csvHeader, err := JSON2CSVHeader(reader)
+	if err != nil {
+		t.Errorf("Exception: %v", err)
+		return
+	}
+
+	// extract row
+	output, err := os.Create("test.csv")
+	if err != nil {
+		t.Errorf("Exception: %v", err)
+	}
+	reader = NewJSONStreamZipReader(zipFileName)
+	err = JSON2CSVOnline(reader, csvHeader, output)
+	if err != nil {
+		t.Errorf("ExceptionL %v", err)
 	}
 }

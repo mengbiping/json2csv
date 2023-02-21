@@ -42,6 +42,63 @@ func NewCSVWriter(w io.Writer) *CSVWriter {
 	}
 }
 
+// WriterHeader only writes header.
+func (w *CSVWriter) WriterHeader(csvHeader CSVHeader) error {
+	result := KeyValue{}
+	for h := range csvHeader {
+		result[h] = ""
+	}
+	results := []KeyValue{result}
+	pts, err := allPointers(results)
+	if err != nil {
+		return err
+	}
+	sort.Sort(pts)
+	header := w.getHeader(pts)
+
+	if err := w.Write(header); err != nil {
+		return err
+	}
+	w.Flush()
+	if err := w.Error(); err != nil {
+		return err
+	}
+	return nil
+}
+
+// WriteCSVByHeader writes CSV rows according the given header.
+// For header columns of csvHeader that are missing in results, output an empty value.
+// Fields of results that are absent in csvHeader are ignored.
+func (w *CSVWriter) WriteCSVByHeader(results []KeyValue, csvHeader CSVHeader) error {
+	result := KeyValue{}
+	for h := range csvHeader {
+		result[h] = ""
+	}
+	pts, err := allPointers([]KeyValue{result})
+	if err != nil {
+		return err
+	}
+	sort.Sort(pts)
+	keys := pts.Strings()
+
+	for _, result := range results {
+		for h := range csvHeader {
+			if _, exist := result[h]; !exist {
+				result[h] = ""
+			}
+		}
+		record := toRecord(result, keys)
+		if err := w.Write(record); err != nil {
+			return err
+		}
+	}
+	w.Flush()
+	if err := w.Error(); err != nil {
+		return err
+	}
+	return nil
+}
+
 // WriteCSV writes CSV data.
 func (w *CSVWriter) WriteCSV(results []KeyValue) error {
 	if w.Transpose {

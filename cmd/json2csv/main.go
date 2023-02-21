@@ -118,7 +118,7 @@ func mainAction(c *cli.Context) {
 		}
 	}
 
-	results, err := json2csv.JSON2CSV(data)
+	results, err := json2csv.JSON2CSV(data, nil)
 	if err != nil {
 		log.Fatal(err)
 	}

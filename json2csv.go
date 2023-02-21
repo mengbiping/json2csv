@@ -3,11 +3,20 @@ package json2csv
 
 import (
 	"errors"
+	"io"
 	"reflect"
 )
 
+type JSONStreamReader interface {
+	Read() map[string]interface{}
+	HasNext() bool
+}
+
+type CSVHeader map[string]interface{}
+
 // JSON2CSV converts JSON to CSV.
-func JSON2CSV(data interface{}) ([]KeyValue, error) {
+// Update CSVHeader according to the data provided if csvHeader is not nil
+func JSON2CSV(data interface{}, csvHeader CSVHeader) ([]KeyValue, error) {
 	results := []KeyValue{}
 	v := valueOf(data)
 	switch v.Kind() {
@@ -18,6 +27,11 @@ func JSON2CSV(data interface{}) ([]KeyValue, error) {
 				return nil, err
 			}
 			results = append(results, result)
+			if csvHeader != nil {
+				for s := range result {
+					csvHeader[s] = ""
+				}
+			}
 		}
 	case reflect.Slice:
 		if isObjectArray(v) {
@@ -27,6 +41,11 @@ func JSON2CSV(data interface{}) ([]KeyValue, error) {
 					return nil, err
 				}
 				results = append(results, result)
+				if csvHeader != nil {
+					for s := range result {
+						csvHeader[s] = ""
+					}
+				}
 			}
 		} else if v.Len() > 0 {
 			result, err := flatten(v)
@@ -35,6 +54,11 @@ func JSON2CSV(data interface{}) ([]KeyValue, error) {
 			}
 			if result != nil {
 				results = append(results, result)
+				if csvHeader != nil {
+					for s := range result {
+						csvHeader[s] = ""
+					}
+				}
 			}
 		}
 	default:
@@ -42,6 +66,39 @@ func JSON2CSV(data interface{}) ([]KeyValue, error) {
 	}
 
 	return results, nil
+}
+
+func JSON2CSVHeader(reader JSONStreamReader) (CSVHeader, error) {
+	header := CSVHeader{}
+	for reader.HasNext() {
+		_, err := JSON2CSV(reader.Read(), header)
+		if err != nil {
+			return header, nil
+		}
+	}
+	return header, nil
+}
+
+func JSON2CSVOnline(reader JSONStreamReader, csvHeader CSVHeader, output io.Writer) error {
+	writer := NewCSVWriter(output)
+	err := writer.WriterHeader(csvHeader)
+	if err != nil {
+		return err
+	}
+	for reader.HasNext() {
+		csvRow, err := JSON2CSV(reader.Read(), nil)
+		if err != nil {
+			return err
+		}
+		err = writer.WriteCSVByHeader(
+			csvRow,
+			csvHeader,
+		)
+		if err != nil {
+			return err
+		}
+	}
+	return nil
 }
 
 func isObjectArray(obj interface{}) bool {
