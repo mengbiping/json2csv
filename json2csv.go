@@ -81,6 +81,8 @@ func JSON2CSVHeader(reader JSONStreamReader) (CSVHeader, error) {
 
 func JSON2CSVOnline(reader JSONStreamReader, csvHeader CSVHeader, output io.Writer) error {
 	writer := NewCSVWriter(output)
+	writer.HeaderStyle = DotBracketStyle
+	writer.Transpose = false
 	err := writer.WriterHeader(csvHeader)
 	if err != nil {
 		return err
