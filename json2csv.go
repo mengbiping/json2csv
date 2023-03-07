@@ -3,6 +3,7 @@ package json2csv
 
 import (
 	"errors"
+	"fmt"
 	"io"
 	"reflect"
 )
@@ -79,10 +80,20 @@ func JSON2CSVHeader(reader JSONStreamReader) (CSVHeader, error) {
 	return header, nil
 }
 
+// FormatCSVHeaderToDotBracket convert given JSONPointerStyle header to DotBracketStyle.
+func FormatCSVHeaderToDotBracket(header string) (string, error) {
+	writer := NewCSVWriter(nil, DotBracketStyle, false)
+	csvHeader := map[string]interface{}{header: nil}
+	result, err := writer.FormatHeader(csvHeader)
+	if err != nil {
+		return "", fmt.Errorf("Failed to format %+v to DotBracket style: %w ",
+			header, err)
+	}
+	return result[0], nil
+}
+
 func JSON2CSVOnline(reader JSONStreamReader, csvHeader CSVHeader, output io.Writer) error {
-	writer := NewCSVWriter(output)
-	writer.HeaderStyle = DotBracketStyle
-	writer.Transpose = false
+	writer := NewCSVWriter(output, DotBracketStyle, false)
 	err := writer.WriterHeader(csvHeader)
 	if err != nil {
 		return err
