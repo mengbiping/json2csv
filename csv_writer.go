@@ -33,28 +33,21 @@ type CSVWriter struct {
 	Transpose   bool
 }
 
-// NewCSVWriter returns new CSVWriter with JSONPointerStyle.
-func NewCSVWriter(w io.Writer) *CSVWriter {
+// NewCSVWriter returns new CSVWriter with given JSONPointerStyle and transpose.
+func NewCSVWriter(w io.Writer, style KeyStyle, transpose bool) *CSVWriter {
 	return &CSVWriter{
 		csv.NewWriter(w),
-		JSONPointerStyle,
-		false,
+		style,
+		transpose,
 	}
 }
 
 // WriterHeader only writes header.
 func (w *CSVWriter) WriterHeader(csvHeader CSVHeader) error {
-	result := KeyValue{}
-	for h := range csvHeader {
-		result[h] = ""
-	}
-	results := []KeyValue{result}
-	pts, err := allPointers(results)
+	header, err := w.FormatHeader(csvHeader)
 	if err != nil {
 		return err
 	}
-	sort.Sort(pts)
-	header := w.getHeader(pts)
 
 	if err := w.Write(header); err != nil {
 		return err
@@ -64,6 +57,22 @@ func (w *CSVWriter) WriterHeader(csvHeader CSVHeader) error {
 		return err
 	}
 	return nil
+}
+
+// FormatHeader formats the given header with CSVWriter.HeaderStyle.
+func (w *CSVWriter) FormatHeader(csvHeader CSVHeader) ([]string, error) {
+	result := KeyValue{}
+	for h := range csvHeader {
+		result[h] = ""
+	}
+	results := []KeyValue{result}
+	pts, err := allPointers(results)
+	if err != nil {
+		return nil, err
+	}
+	sort.Sort(pts)
+	header := w.getHeader(pts)
+	return header, nil
 }
 
 // WriteCSVByHeader writes CSV rows according the given header.
