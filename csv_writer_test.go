@@ -9,7 +9,7 @@ import (
 
 func TestKeyWithTrailingSpace(t *testing.T) {
 	b := &bytes.Buffer{}
-	wr := json2csv.NewCSVWriter(b)
+	wr := json2csv.NewCSVWriter(b, json2csv.JSONPointerStyle, false)
 	responses := []map[string]interface{}{
 		{
 			" A":  1,

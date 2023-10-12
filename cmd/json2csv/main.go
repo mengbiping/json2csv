@@ -1,11 +1,13 @@
 package main
 
 import (
+	"archive/zip"
 	"encoding/json"
 	"fmt"
 	"io"
 	"log"
 	"os"
+	"strings"
 
 	"github.com/yukithm/json2csv"
 	"github.com/yukithm/json2csv/jsonpointer"
@@ -78,6 +80,10 @@ COPYRIGHT:
 			Name:  "transpose",
 			Usage: "transpose rows and columns",
 		},
+		cli.BoolFlag{
+			Name:  "online",
+			Usage: "convert data online",
+		},
 		cli.HelpFlag,
 	}
 
@@ -102,8 +108,29 @@ COPYRIGHT:
 func mainAction(c *cli.Context) {
 	var data interface{}
 	var err error
+	headerStyle := headerStyleTable[c.String("header-style")]
 	if c.NArg() > 0 && c.Args()[0] != "-" {
-		data, err = readJSONFile(c.Args()[0])
+		filename := c.Args()[0]
+		if c.Bool("online") && strings.HasSuffix(filename, ".zip") {
+			zipReader, err := zip.OpenReader(filename)
+			reader := json2csv.NewJSONStreamZipReader(&zipReader.Reader)
+			csvHeader, err := json2csv.JSON2CSVHeader(reader)
+			if err != nil {
+				log.Fatal(err)
+				return
+			}
+			reader = json2csv.NewJSONStreamZipReader(&zipReader.Reader)
+			err = json2csv.JSON2CSVOnline(reader, csvHeader, os.Stdout, headerStyle, false)
+			if err != nil {
+				log.Fatal(err)
+			}
+			err = zipReader.Close()
+			if err != nil {
+				log.Fatal(err)
+			}
+			return
+		}
+		data, err = readJSONFile(filename)
 	} else {
 		data, err = readJSON(os.Stdin)
 	}
@@ -126,7 +153,6 @@ func mainAction(c *cli.Context) {
 		return
 	}
 
-	headerStyle := headerStyleTable[c.String("header-style")]
 	err = printCSV(os.Stdout, results, headerStyle, c.Bool("transpose"))
 	if err != nil {
 		log.Fatal(err)
@@ -156,7 +182,7 @@ func readJSON(r io.Reader) (interface{}, error) {
 }
 
 func printCSV(w io.Writer, results []json2csv.KeyValue, headerStyle json2csv.KeyStyle, transpose bool) error {
-	csv := json2csv.NewCSVWriter(w)
+	csv := json2csv.NewCSVWriter(w, headerStyle, transpose)
 	csv.HeaderStyle = headerStyle
 	csv.Transpose = transpose
 	if err := csv.WriteCSV(results); err != nil {

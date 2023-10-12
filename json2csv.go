@@ -92,8 +92,8 @@ func FormatCSVHeaderToDotBracket(header string) (string, error) {
 	return result[0], nil
 }
 
-func JSON2CSVOnline(reader JSONStreamReader, csvHeader CSVHeader, output io.Writer) error {
-	writer := NewCSVWriter(output, DotBracketStyle, false)
+func JSON2CSVOnline(reader JSONStreamReader, csvHeader CSVHeader, output io.Writer, style KeyStyle, transpose bool) error {
+	writer := NewCSVWriter(output, style, transpose)
 	err := writer.WriterHeader(csvHeader)
 	if err != nil {
 		return err
