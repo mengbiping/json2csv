@@ -154,7 +154,7 @@ func TestJSON2CSVOnline(t *testing.T) {
 		t.Errorf("Exception: %v", err)
 	}
 	reader = NewJSONStreamZipReader(&zipReader.Reader)
-	err = JSON2CSVOnline(reader, csvHeader, output)
+	err = JSON2CSVOnline(reader, csvHeader, output, DotBracketStyle, false)
 	if err != nil {
 		t.Errorf("ExceptionL %v", err)
 	}
