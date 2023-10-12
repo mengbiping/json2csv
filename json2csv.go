@@ -11,6 +11,7 @@ import (
 type JSONStreamReader interface {
 	Read() map[string]interface{}
 	HasNext() bool
+    Close()
 }
 
 type CSVHeader map[string]interface{}
@@ -74,7 +75,7 @@ func JSON2CSVHeader(reader JSONStreamReader) (CSVHeader, error) {
 	for reader.HasNext() {
 		_, err := JSON2CSV(reader.Read(), header)
 		if err != nil {
-			return header, nil
+			return header, err
 		}
 	}
 	return header, nil

@@ -81,8 +81,8 @@ COPYRIGHT:
 			Usage: "transpose rows and columns",
 		},
 		cli.BoolFlag{
-			Name:  "online",
-			Usage: "convert data online",
+			Name:  "stream",
+			Usage: "convert data stream",
 		},
 		cli.HelpFlag,
 	}
@@ -105,26 +105,47 @@ COPYRIGHT:
 	app.RunAndExitOnError()
 }
 
+func streamReaderFromFile(filename string) json2csv.JSONStreamReader {
+	var reader json2csv.JSONStreamReader
+	if strings.HasSuffix(filename, ".zip") {
+		zipReader, err := zip.OpenReader(filename)
+		if err != nil {
+			log.Fatal(err)
+			return nil
+		}
+		// defer zipReader.Close()
+		reader = json2csv.NewJSONStreamZipReader(zipReader)
+	} else {
+		file, err := os.Open(filename)
+		if err != nil {
+			log.Fatal(err)
+			return nil
+		}
+		// defer file.Close()
+		reader = json2csv.NewJSONStreamLineReader(file)
+
+	}
+	return reader
+}
+
 func mainAction(c *cli.Context) {
 	var data interface{}
 	var err error
 	headerStyle := headerStyleTable[c.String("header-style")]
 	if c.NArg() > 0 && c.Args()[0] != "-" {
 		filename := c.Args()[0]
-		if c.Bool("online") && strings.HasSuffix(filename, ".zip") {
-			zipReader, err := zip.OpenReader(filename)
-			reader := json2csv.NewJSONStreamZipReader(&zipReader.Reader)
+		if c.Bool("stream") {
+			reader := streamReaderFromFile(filename)
+			fmt.Println("Creating Header...")
 			csvHeader, err := json2csv.JSON2CSVHeader(reader)
 			if err != nil {
 				log.Fatal(err)
-				return
 			}
-			reader = json2csv.NewJSONStreamZipReader(&zipReader.Reader)
+			reader.Close()
+			reader = streamReaderFromFile(filename)
 			err = json2csv.JSON2CSVOnline(reader, csvHeader, os.Stdout, headerStyle, false)
-			if err != nil {
-				log.Fatal(err)
-			}
-			err = zipReader.Close()
+			reader.Close()
+			fmt.Println("Finished online parsing...")
 			if err != nil {
 				log.Fatal(err)
 			}

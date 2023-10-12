@@ -6,17 +6,25 @@ import (
 	"io"
 )
 
-func NewJSONStreamZipReader(zipReader *zip.Reader) JSONStreamReader {
-	return &JSONStreamZipReader{data: zipReader.File}
+func NewJSONStreamZipReader(zipReader *zip.ReadCloser) JSONStreamReader {
+	return &JSONStreamZipReader{
+        data: zipReader.Reader.File,
+        reader: zipReader,
+    }
 }
 
 type JSONStreamZipReader struct {
 	data  []*zip.File
+    reader  *zip.ReadCloser
 	index int
 }
 
 func (jz *JSONStreamZipReader) HasNext() bool {
 	return jz.index < len(jz.data)
+}
+
+func (jz *JSONStreamZipReader) Close() {
+    jz.reader.Close()
 }
 
 func (jz *JSONStreamZipReader) Read() map[string]interface{} {
