@@ -136,7 +136,6 @@ func mainAction(c *cli.Context) {
 		filename := c.Args()[0]
 		if c.Bool("stream") {
 			reader := streamReaderFromFile(filename)
-			fmt.Println("Creating Header...")
 			csvHeader, err := json2csv.JSON2CSVHeader(reader)
 			if err != nil {
 				log.Fatal(err)
@@ -145,7 +144,6 @@ func mainAction(c *cli.Context) {
 			reader = streamReaderFromFile(filename)
 			err = json2csv.JSON2CSVOnline(reader, csvHeader, os.Stdout, headerStyle, false)
 			reader.Close()
-			fmt.Println("Finished online parsing...")
 			if err != nil {
 				log.Fatal(err)
 			}
