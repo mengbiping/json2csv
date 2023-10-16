@@ -4,6 +4,7 @@ package json2csv
 import (
 	"errors"
 	"fmt"
+	"github.com/yukithm/json2csv/jsonpointer"
 	"io"
 	"reflect"
 )
@@ -11,7 +12,7 @@ import (
 type JSONStreamReader interface {
 	Read() map[string]interface{}
 	HasNext() bool
-    Close()
+	Close()
 }
 
 type CSVHeader map[string]interface{}
@@ -70,10 +71,19 @@ func JSON2CSV(data interface{}, csvHeader CSVHeader) ([]KeyValue, error) {
 	return results, nil
 }
 
-func JSON2CSVHeader(reader JSONStreamReader) (CSVHeader, error) {
+func JSON2CSVHeader(reader JSONStreamReader, path string) (CSVHeader, error) {
 	header := CSVHeader{}
+	var data interface{}
+	var err error
 	for reader.HasNext() {
-		_, err := JSON2CSV(reader.Read(), header)
+		data = reader.Read()
+		if path != "" {
+			data, err = jsonpointer.Get(data, path)
+			if err != nil {
+				return header, err
+			}
+		}
+		_, err := JSON2CSV(data, header)
 		if err != nil {
 			return header, err
 		}
@@ -93,14 +103,22 @@ func FormatCSVHeaderToDotBracket(header string) (string, error) {
 	return result[0], nil
 }
 
-func JSON2CSVOnline(reader JSONStreamReader, csvHeader CSVHeader, output io.Writer, style KeyStyle, transpose bool) error {
+func JSON2CSVOnline(reader JSONStreamReader, csvHeader CSVHeader, output io.Writer, style KeyStyle, transpose bool, path string) error {
 	writer := NewCSVWriter(output, style, transpose)
 	err := writer.WriterHeader(csvHeader)
 	if err != nil {
 		return err
 	}
+	var data interface{}
 	for reader.HasNext() {
-		csvRow, err := JSON2CSV(reader.Read(), nil)
+		data = reader.Read()
+		if path != "" {
+			data, err = jsonpointer.Get(data, path)
+			if err != nil {
+				return err
+			}
+		}
+		csvRow, err := JSON2CSV(data, nil)
 		if err != nil {
 			return err
 		}
