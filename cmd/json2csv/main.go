@@ -136,13 +136,13 @@ func mainAction(c *cli.Context) {
 		filename := c.Args()[0]
 		if c.Bool("stream") {
 			reader := streamReaderFromFile(filename)
-			csvHeader, err := json2csv.JSON2CSVHeader(reader)
+			csvHeader, err := json2csv.JSON2CSVHeader(reader, c.String("path"))
 			if err != nil {
 				log.Fatal(err)
 			}
 			reader.Close()
 			reader = streamReaderFromFile(filename)
-			err = json2csv.JSON2CSVOnline(reader, csvHeader, os.Stdout, headerStyle, false)
+			err = json2csv.JSON2CSVOnline(reader, csvHeader, os.Stdout, headerStyle, false, c.String("path"))
 			reader.Close()
 			if err != nil {
 				log.Fatal(err)
