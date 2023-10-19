@@ -78,7 +78,7 @@ COPYRIGHT:
 			Usage: "target path (JSON Pointer) of the content",
 		},
 		cli.IntFlag{
-			Name:  "sliceLen",
+			Name:  "slice-len",
 			Value: math.MaxInt,
 			Usage: "Specify the length of the slice to be processed.",
 		},
@@ -138,7 +138,7 @@ func mainAction(c *cli.Context) {
 	var data interface{}
 	var err error
 	headerStyle := headerStyleTable[c.String("header-style")]
-	sliceLen := c.Int("sliceLen")
+	sliceLen := c.Int("slice-len")
 	if c.NArg() > 0 && c.Args()[0] != "-" {
 		filename := c.Args()[0]
 		if c.Bool("stream") {
