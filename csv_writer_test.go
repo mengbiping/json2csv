@@ -2,6 +2,7 @@ package json2csv_test
 
 import (
 	"bytes"
+	"math"
 	"testing"
 
 	"github.com/yukithm/json2csv"
@@ -23,7 +24,7 @@ func TestKeyWithTrailingSpace(t *testing.T) {
 		},
 	}
 
-	csvContent, err := json2csv.JSON2CSV(responses, nil) // csvContent seems to be complete!
+	csvContent, err := json2csv.JSON2CSV(responses, nil, math.MaxInt) // csvContent seems to be complete!
 	if err != nil {
 		t.Fatal(err)
 	}

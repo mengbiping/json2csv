@@ -3,6 +3,7 @@ package json2csv
 import (
 	"encoding/json"
 	"fmt"
+	"math"
 	"reflect"
 	"sort"
 	"strconv"
@@ -36,16 +37,16 @@ func (kv KeyValue) Keys() []string {
 	return keys
 }
 
-func flatten(obj interface{}) (KeyValue, error) {
+func flatten(obj interface{}, sliceLen int) (KeyValue, error) {
 	f := make(KeyValue, 0)
 	key := jsonpointer.JSONPointer{}
-	if err := _flatten(f, obj, key); err != nil {
+	if err := _flatten(f, obj, key, sliceLen); err != nil {
 		return nil, err
 	}
 	return f, nil
 }
 
-func _flatten(out KeyValue, obj interface{}, key jsonpointer.JSONPointer) error {
+func _flatten(out KeyValue, obj interface{}, key jsonpointer.JSONPointer, sliceLen int) error {
 	value, ok := obj.(reflect.Value)
 	if !ok {
 		value = reflect.ValueOf(obj)
@@ -64,9 +65,9 @@ func _flatten(out KeyValue, obj interface{}, key jsonpointer.JSONPointer) error 
 
 	switch value.Kind() {
 	case reflect.Map:
-		_flattenMap(out, value, key)
+		_flattenMap(out, value, key, sliceLen)
 	case reflect.Slice:
-		_flattenSlice(out, value, key)
+		_flattenSlice(out, value, key, sliceLen)
 	case reflect.String:
 		out[key.String()] = value.String()
 	case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64:
@@ -83,19 +84,20 @@ func _flatten(out KeyValue, obj interface{}, key jsonpointer.JSONPointer) error 
 	return nil
 }
 
-func _flattenMap(out map[string]interface{}, value reflect.Value, prefix jsonpointer.JSONPointer) {
+func _flattenMap(out map[string]interface{}, value reflect.Value, prefix jsonpointer.JSONPointer, sliceLen int) {
 	keys := sortedMapKeys(value)
 	for _, key := range keys {
 		pointer := prefix.Clone()
 		pointer.AppendString(key.String())
-		_flatten(out, value.MapIndex(key).Interface(), pointer)
+		_flatten(out, value.MapIndex(key).Interface(), pointer, sliceLen)
 	}
 }
 
-func _flattenSlice(out map[string]interface{}, value reflect.Value, prefix jsonpointer.JSONPointer) {
-	for i := 0; i < value.Len(); i++ {
+func _flattenSlice(out map[string]interface{}, value reflect.Value, prefix jsonpointer.JSONPointer, sliceLen int) {
+	count := int(math.Min(float64(sliceLen), float64(value.Len())))
+	for i := 0; i < count; i++ {
 		pointer := prefix.Clone()
 		pointer.AppendString(strconv.Itoa(i))
-		_flatten(out, value.Index(i).Interface(), pointer)
+		_flatten(out, value.Index(i).Interface(), pointer, sliceLen)
 	}
 }
