@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"github.com/yukithm/json2csv/jsonpointer"
 	"io"
+	"math"
 	"reflect"
 )
 
@@ -19,13 +20,13 @@ type CSVHeader map[string]interface{}
 
 // JSON2CSV converts JSON to CSV.
 // Update CSVHeader according to the data provided if csvHeader is not nil
-func JSON2CSV(data interface{}, csvHeader CSVHeader) ([]KeyValue, error) {
+func JSON2CSV(data interface{}, csvHeader CSVHeader, sliceLen int) ([]KeyValue, error) {
 	results := []KeyValue{}
 	v := valueOf(data)
 	switch v.Kind() {
 	case reflect.Map:
 		if v.Len() > 0 {
-			result, err := flatten(v)
+			result, err := flatten(v, sliceLen)
 			if err != nil {
 				return nil, err
 			}
@@ -37,9 +38,10 @@ func JSON2CSV(data interface{}, csvHeader CSVHeader) ([]KeyValue, error) {
 			}
 		}
 	case reflect.Slice:
+		count := int(math.Min(float64(sliceLen), float64(v.Len())))
 		if isObjectArray(v) {
-			for i := 0; i < v.Len(); i++ {
-				result, err := flatten(v.Index(i))
+			for i := 0; i < count; i++ {
+				result, err := flatten(v.Index(i), sliceLen)
 				if err != nil {
 					return nil, err
 				}
@@ -51,7 +53,7 @@ func JSON2CSV(data interface{}, csvHeader CSVHeader) ([]KeyValue, error) {
 				}
 			}
 		} else if v.Len() > 0 {
-			result, err := flatten(v)
+			result, err := flatten(v, sliceLen)
 			if err != nil {
 				return nil, err
 			}
@@ -71,7 +73,7 @@ func JSON2CSV(data interface{}, csvHeader CSVHeader) ([]KeyValue, error) {
 	return results, nil
 }
 
-func JSON2CSVHeader(reader JSONStreamReader, path string) (CSVHeader, error) {
+func JSON2CSVHeader(reader JSONStreamReader, path string, sliceLen int) (CSVHeader, error) {
 	header := CSVHeader{}
 	var data interface{}
 	var err error
@@ -83,7 +85,7 @@ func JSON2CSVHeader(reader JSONStreamReader, path string) (CSVHeader, error) {
 				return header, err
 			}
 		}
-		_, err := JSON2CSV(data, header)
+		_, err := JSON2CSV(data, header, sliceLen)
 		if err != nil {
 			return header, err
 		}
@@ -103,7 +105,7 @@ func FormatCSVHeaderToDotBracket(header string) (string, error) {
 	return result[0], nil
 }
 
-func JSON2CSVOnline(reader JSONStreamReader, csvHeader CSVHeader, output io.Writer, style KeyStyle, transpose bool, path string) error {
+func JSON2CSVOnline(reader JSONStreamReader, csvHeader CSVHeader, output io.Writer, style KeyStyle, transpose bool, path string, sliceLen int) error {
 	writer := NewCSVWriter(output, style, transpose)
 	err := writer.WriterHeader(csvHeader)
 	if err != nil {
@@ -118,7 +120,7 @@ func JSON2CSVOnline(reader JSONStreamReader, csvHeader CSVHeader, output io.Writ
 				return err
 			}
 		}
-		csvRow, err := JSON2CSV(data, nil)
+		csvRow, err := JSON2CSV(data, nil, sliceLen)
 		if err != nil {
 			return err
 		}

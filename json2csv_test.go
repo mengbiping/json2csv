@@ -4,6 +4,7 @@ import (
 	"archive/zip"
 	"bytes"
 	"encoding/json"
+	"math"
 	"os"
 	"reflect"
 	"testing"
@@ -127,7 +128,7 @@ func TestJSON2CSV(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		actual, err = JSON2CSV(obj, csvHeader)
+		actual, err = JSON2CSV(obj, csvHeader, math.MaxInt)
 		if err != nil {
 			if err.Error() != testCase.err {
 				t.Errorf("%d: Expected %v, but %v", caseIndex, testCase.err, err)
@@ -142,7 +143,7 @@ func TestJSON2CSVOnline(t *testing.T) {
 	// extract csvHeader
 	zipReader, err := zip.OpenReader("test.zip")
 	reader := NewJSONStreamZipReader(zipReader)
-	csvHeader, err := JSON2CSVHeader(reader, "")
+	csvHeader, err := JSON2CSVHeader(reader, "", math.MaxInt)
 	if err != nil {
 		t.Errorf("Exception: %v", err)
 		return
@@ -154,7 +155,7 @@ func TestJSON2CSVOnline(t *testing.T) {
 		t.Errorf("Exception: %v", err)
 	}
 	reader = NewJSONStreamZipReader(zipReader)
-	err = JSON2CSVOnline(reader, csvHeader, output, DotBracketStyle, false, "")
+	err = JSON2CSVOnline(reader, csvHeader, output, DotBracketStyle, false, "", math.MaxInt)
 	if err != nil {
 		t.Errorf("ExceptionL %v", err)
 	}

@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"io"
 	"log"
+	"math"
 	"os"
 	"strings"
 
@@ -76,6 +77,11 @@ COPYRIGHT:
 			Name:  "path",
 			Usage: "target path (JSON Pointer) of the content",
 		},
+		cli.IntFlag{
+			Name:  "sliceLen",
+			Value: math.MaxInt,
+			Usage: "Specify the length of the slice to be processed.",
+		},
 		cli.BoolFlag{
 			Name:  "transpose",
 			Usage: "transpose rows and columns",
@@ -132,17 +138,18 @@ func mainAction(c *cli.Context) {
 	var data interface{}
 	var err error
 	headerStyle := headerStyleTable[c.String("header-style")]
+	sliceLen := c.Int("sliceLen")
 	if c.NArg() > 0 && c.Args()[0] != "-" {
 		filename := c.Args()[0]
 		if c.Bool("stream") {
 			reader := streamReaderFromFile(filename)
-			csvHeader, err := json2csv.JSON2CSVHeader(reader, c.String("path"))
+			csvHeader, err := json2csv.JSON2CSVHeader(reader, c.String("path"), sliceLen)
 			if err != nil {
 				log.Fatal(err)
 			}
 			reader.Close()
 			reader = streamReaderFromFile(filename)
-			err = json2csv.JSON2CSVOnline(reader, csvHeader, os.Stdout, headerStyle, false, c.String("path"))
+			err = json2csv.JSON2CSVOnline(reader, csvHeader, os.Stdout, headerStyle, false, c.String("path"), sliceLen)
 			reader.Close()
 			if err != nil {
 				log.Fatal(err)
@@ -164,7 +171,7 @@ func mainAction(c *cli.Context) {
 		}
 	}
 
-	results, err := json2csv.JSON2CSV(data, nil)
+	results, err := json2csv.JSON2CSV(data, nil, sliceLen)
 	if err != nil {
 		log.Fatal(err)
 	}
