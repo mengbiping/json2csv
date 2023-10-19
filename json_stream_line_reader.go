@@ -9,7 +9,7 @@ import (
 
 func NewJSONStreamLineReader(f *os.File) JSONStreamReader {
 	s := bufio.NewScanner(f)
-	s.Buffer(make([]byte, 0, 1024 * 1024), 1024 * 1024)
+	s.Buffer(make([]byte, 0, 1024 * 1024), 20* 1024 * 1024)
 	jr := &JSONStreamLineReader{
 		f: f,
 		scanner: s,
